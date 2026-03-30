@@ -25,7 +25,7 @@ export default function InterviewPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-dvh">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <InterviewChat
         interviewId={id}
         track={track}
