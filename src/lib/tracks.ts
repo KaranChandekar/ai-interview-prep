@@ -295,6 +295,40 @@ export const tracks: Record<string, Track> = {
 
 export type TrackKey = keyof typeof tracks;
 
+export interface TrackGroup {
+  label: string;
+  icon: string;
+  trackIds: string[];
+}
+
+export const trackGroups: TrackGroup[] = [
+  {
+    label: "Engineering",
+    icon: "💻",
+    trackIds: ["frontend", "backend", "fullstack", "mobile"],
+  },
+  {
+    label: "Data & AI",
+    icon: "🤖",
+    trackIds: ["data", "ml", "dsa"],
+  },
+  {
+    label: "Infrastructure",
+    icon: "🏗️",
+    trackIds: ["devops", "security", "cloud"],
+  },
+  {
+    label: "Product & Design",
+    icon: "🎯",
+    trackIds: ["pm", "ux", "qa"],
+  },
+  {
+    label: "Soft Skills",
+    icon: "💬",
+    trackIds: ["behavioral"],
+  },
+];
+
 export function getTrack(id: string): Track | undefined {
   return tracks[id];
 }

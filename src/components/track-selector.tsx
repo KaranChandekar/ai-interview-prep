@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +21,12 @@ import {
   BarChart3,
   Mic,
   Brain,
+  Search,
+  X,
 } from "lucide-react";
-import { getAllTracks } from "@/lib/tracks";
+import { getAllTracks, trackGroups } from "@/lib/tracks";
 import { getDifficultyLabel } from "@/lib/difficulty";
-import type { Difficulty, Track, TrackId } from "@/types";
+import type { Difficulty, Track } from "@/types";
 
 const trackColors: Record<string, string> = {
   frontend: "from-violet-500/20 to-purple-500/20 border-violet-500/30",
@@ -60,6 +62,33 @@ export function TrackSelector() {
   const [questionCount, setQuestionCount] = useState(8);
   const [timerEnabled, setTimerEnabled] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeGroup, setActiveGroup] = useState<string>("All");
+
+  const filteredTracks = useMemo(() => {
+    let result = tracks;
+
+    // Filter by group
+    if (activeGroup !== "All") {
+      const group = trackGroups.find((g) => g.label === activeGroup);
+      if (group) {
+        result = result.filter((t) => group.trackIds.includes(t.id));
+      }
+    }
+
+    // Filter by search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.description.toLowerCase().includes(q) ||
+          t.categories.some((c) => c.toLowerCase().includes(q))
+      );
+    }
+
+    return result;
+  }, [tracks, activeGroup, searchQuery]);
 
   const handleTrackClick = (track: Track) => {
     setSelectedTrack(track);
@@ -80,7 +109,7 @@ export function TrackSelector() {
   };
 
   return (
-    <div className="space-y-8 sm:space-y-10">
+    <div className="space-y-6 sm:space-y-8">
       {/* Hero */}
       <div className="text-center space-y-3 sm:space-y-4">
         <motion.div
@@ -133,60 +162,159 @@ export function TrackSelector() {
         </motion.div>
       </div>
 
-      {/* Track Grid */}
+      {/* Search & Filters */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+        className="space-y-4"
       >
-        {tracks.map((track, i) => (
-          <motion.div
-            key={track.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.03 * i }}
-            whileHover={{ scale: 1.03, y: -2 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <Card
-              className={`cursor-pointer transition-all duration-200 bg-gradient-to-br border hover:shadow-lg ${trackColors[track.id]}`}
-              onClick={() => handleTrackClick(track)}
+        {/* Search bar */}
+        <div className="relative max-w-md mx-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tracks, topics, or skills..."
+            className="w-full h-10 pl-10 pr-10 rounded-full border border-border bg-background/80 backdrop-blur-sm text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <CardHeader className="pb-2 px-4 pt-4">
-                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <span className="text-2xl">{track.icon}</span>
-                  {track.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {track.description}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {track.categories.slice(0, 3).map((cat) => (
-                    <Badge
-                      key={cat}
-                      variant="secondary"
-                      className="text-[10px] sm:text-xs bg-background/60 backdrop-blur-sm"
-                    >
-                      {cat}
-                    </Badge>
-                  ))}
-                  {track.categories.length > 3 && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] sm:text-xs bg-background/40"
-                    >
-                      +{track.categories.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Category filter pills */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveGroup("All")}
+            className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+              activeGroup === "All"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            All
+          </button>
+          {trackGroups.map((group) => (
+            <button
+              key={group.label}
+              type="button"
+              onClick={() =>
+                setActiveGroup(
+                  activeGroup === group.label ? "All" : group.label
+                )
+              }
+              className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+                activeGroup === group.label
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <span className="mr-1.5">{group.icon}</span>
+              {group.label}
+            </button>
+          ))}
+        </div>
       </motion.div>
+
+      {/* Results count */}
+      {(searchQuery || activeGroup !== "All") && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-sm text-muted-foreground text-center"
+        >
+          {filteredTracks.length === 0
+            ? "No tracks found. Try a different search or category."
+            : `Showing ${filteredTracks.length} track${filteredTracks.length !== 1 ? "s" : ""}`}
+        </motion.p>
+      )}
+
+      {/* Track Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        <AnimatePresence mode="popLayout">
+          {filteredTracks.map((track) => (
+            <motion.div
+              key={track.id}
+              layout
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <Card
+                className={`cursor-pointer transition-all duration-200 bg-gradient-to-br border hover:shadow-lg h-full ${trackColors[track.id]}`}
+                onClick={() => handleTrackClick(track)}
+              >
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <span className="text-2xl">{track.icon}</span>
+                    {track.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {track.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {track.categories.slice(0, 3).map((cat) => (
+                      <Badge
+                        key={cat}
+                        variant="secondary"
+                        className="text-[10px] sm:text-xs bg-background/60 backdrop-blur-sm"
+                      >
+                        {cat}
+                      </Badge>
+                    ))}
+                    {track.categories.length > 3 && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] sm:text-xs bg-background/40"
+                      >
+                        +{track.categories.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Empty state */}
+      {filteredTracks.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12"
+        >
+          <div className="text-4xl mb-3">🔍</div>
+          <p className="text-muted-foreground">
+            No tracks match your search.
+          </p>
+          <Button
+            variant="ghost"
+            className="mt-3"
+            onClick={() => {
+              setSearchQuery("");
+              setActiveGroup("All");
+            }}
+          >
+            Clear filters
+          </Button>
+        </motion.div>
+      )}
 
       {/* Interview Settings Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
